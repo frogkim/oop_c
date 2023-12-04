@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src_windows">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="src_linux">
+      <UniqueIdentifier>{ce14d12d-f758-4cdf-b351-85feea67d31b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="header">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="asm">
+      <UniqueIdentifier>{2b5f5947-3063-40d7-9bcc-308d3bbfa49d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libchat.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="libchat_internal.h">
+      <Filter>header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="server_listen.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="server_iocp.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="create_server.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="server_initilization.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="server_recv.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="server_send.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="queue.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="create_client.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="clients_thread_functions.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="client_initilization.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="server_configuration.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="client_configuration.c">
+      <Filter>src_windows</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="spin_lock.asm">
+      <Filter>asm</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>

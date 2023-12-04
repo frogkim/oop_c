@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34309.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "src\client\client.vcxproj", "{91E7A4D8-1C28-480B-B6F1-6277675378B3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "server", "src\server\server.vcxproj", "{2B12E479-94AC-4C0A-8C74-7B5F2B742390}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libchat", "src\libchat\libchat.vcxproj", "{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{91E7A4D8-1C28-480B-B6F1-6277675378B3}.Debug|x64.ActiveCfg = Debug|x64
+		{91E7A4D8-1C28-480B-B6F1-6277675378B3}.Debug|x64.Build.0 = Debug|x64
+		{91E7A4D8-1C28-480B-B6F1-6277675378B3}.Release|x64.ActiveCfg = Release|x64
+		{91E7A4D8-1C28-480B-B6F1-6277675378B3}.Release|x64.Build.0 = Release|x64
+		{2B12E479-94AC-4C0A-8C74-7B5F2B742390}.Debug|x64.ActiveCfg = Debug|x64
+		{2B12E479-94AC-4C0A-8C74-7B5F2B742390}.Debug|x64.Build.0 = Debug|x64
+		{2B12E479-94AC-4C0A-8C74-7B5F2B742390}.Release|x64.ActiveCfg = Release|x64
+		{2B12E479-94AC-4C0A-8C74-7B5F2B742390}.Release|x64.Build.0 = Release|x64
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}.Debug|x64.ActiveCfg = Debug|x64
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}.Debug|x64.Build.0 = Debug|x64
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}.Release|x64.ActiveCfg = Release|x64
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C76C9E16-7566-42B7-8362-8ABE1C3FF629}
+	EndGlobalSection
+EndGlobal
