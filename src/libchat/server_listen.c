@@ -1,4 +1,4 @@
-#include "libchat_internal.h"
+#include "libchat_server.h"
 
 #ifdef LINUX
 #else
@@ -9,14 +9,12 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
     HANDLE          h_iocp = self->_h_iocp;
     p_node_t        clients = self->_nodes_client;
     p_queue_t       p_seat_queue = self->_q_prior_seats_uint32;
-    p_queue_t       p_recv_queue = self->_q_recv_client;
-    PKEYHOLDER      p_keyholder_seat = &self->_keyholder_seat;
-    PKEYHOLDER      p_keyholder_recv = &self->_keyholder_recv;
 
     SOCKET			h_client;
     SOCKADDR		ClientAddr;
     int				nAddrSize = sizeof(SOCKADDR);
     uint32_t        index = 0;
+    uint32_t        max_clients = 0;
     BOOL            result = FALSE;
 #ifdef DEBUG
     puts("func_thread_accept started.");
@@ -25,18 +23,15 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
     while ((h_client = accept(s_listen, &ClientAddr, &nAddrSize)) != INVALID_SOCKET)
     {
         if (p_seat_queue->size > 0) {
-            result = p_seat_queue->get_front(p_seat_queue, &index);
-#ifdef DEBUG
-            assert(result);
-#endif // DEBUG
-            spin_lock(p_keyholder_seat);
-            index = p_seat_queue->size;
-            p_seat_queue->size++;
-            spin_unlock(p_keyholder_seat);
+            p_seat_queue->get_front(p_seat_queue, &index);
+        } else {
+            index = max_clients;
+            max_clients++;
         }
+
         clients[index].socket = h_client;
         memset(clients[index].wsabuf.buf, 0, self->size_buffer);
-        memset(&clients[index].wol, 0, sizeof(WSAOVERLAPPED));
+        clients[index].p_wol = NULL;
         clients[index].n_recv = 0;
         clients[index].flag = 0;
 
@@ -46,7 +41,7 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
             1,                          // number of wsabuf
             &clients[index].n_recv,
             &clients[index].flag,       // flag for modifying the behavior of the WSARecv
-            &clients[index].wol,
+            clients[index].p_wol,
             NULL                        // callback
         );
 #ifdef DEBUG

@@ -62,6 +62,7 @@ int main(int argv, char** argc)
             c->send_async(c, buf);
             puts("Sent asynchronously");
             break;
+
         case 'r':
             memset(buf, 0, 8192);
             c->recv_async(c, buf);

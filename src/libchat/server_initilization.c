@@ -1,6 +1,6 @@
 // init_deinit_server.c
 // 
-#include "libchat_internal.h"
+#include "libchat_server.h"
 #ifdef LINUX
 #else
 
@@ -9,8 +9,10 @@ typedef enum _step {
     malloc_clients,
     malloc_clients_buffer,
     malloc_seats,
-    malloc_recvs,
+    malloc_works,
+    malloc_works_events,
     malloc_sends,
+    malloc_sends_events,
     startup_wsa,
     socket_open,
     socket_bind,
@@ -19,9 +21,9 @@ typedef enum _step {
     iocp_create_threadpool,
     iocp_create_cleanupgroup,
     iocp_create_work,
-    recv_create_threadpool,
-    recv_create_cleanupgroup,
-    recv_create_work,
+    work_create_threadpool,
+    work_create_cleanupgroup,
+    work_create_work,
     send_create_threadpool,
     send_create_cleanupgroup,
     send_create_work,
@@ -33,7 +35,7 @@ static STEP init_node(p_Server_original_t self);
 static STEP init_queues(p_Server_original_t self);
 static STEP init_listen(p_Server_original_t self);
 static STEP init_iocp(p_Server_original_t self);
-static STEP init_recv(p_Server_original_t self);
+static STEP init_work(p_Server_original_t self);
 static STEP init_send(p_Server_original_t self);
 static VOID release_server(p_Server_original_t self, STEP step);
 
@@ -66,7 +68,7 @@ BOOL _init_server(p_Server_t _self)
         return FALSE;
     }
 
-    result = init_recv(self);
+    result = init_work(self);
     if (result != done) {
         release_server(self, result);
         return FALSE;
@@ -86,8 +88,6 @@ BOOL _deinit_server(p_Server_t _self)
 {
     p_Server_original_t self = (p_Server_original_t)_self;
     release_server(self, all_release);
-    CloseHandle(self->_evt_recv);
-    CloseHandle(self->_evt_send);
     WSACleanup();
     safe_release(self);
     return TRUE;
@@ -106,12 +106,13 @@ VOID release_server(p_Server_original_t self, STEP step)
         CloseThreadpool(self->_send_threadpool);
     case send_create_threadpool:
         // no work for recv_work
-    case recv_create_work:
-        CloseThreadpoolCleanupGroupMembers(self->_recv_cleanupgroup, FALSE, NULL);
-        CloseThreadpoolCleanupGroup(self->_recv_cleanupgroup);
-    case recv_create_cleanupgroup:
-        CloseThreadpool(self->_recv_threadpool);
-    case recv_create_threadpool:
+    case work_create_work:
+        safe_release(self->_work_events);
+        CloseThreadpoolCleanupGroupMembers(self->_work_cleanupgroup, FALSE, NULL);
+        CloseThreadpoolCleanupGroup(self->_work_cleanupgroup);
+    case work_create_cleanupgroup:
+        CloseThreadpool(self->_work_threadpool);
+    case work_create_threadpool:
         // no work for iocp_work
     case iocp_create_work:
         CloseThreadpoolCleanupGroupMembers(self->_iocp_cleanupgroup, FALSE, NULL);
@@ -127,12 +128,16 @@ VOID release_server(p_Server_original_t self, STEP step)
     case socket_bind:
         closesocket(self->_s_listen);
     case socket_open:
-        safe_release((void*)self->_q_send_client);
     case startup_wsa:
+        safe_release(self->_q_send_events);
+    case malloc_sends_events:
+        safe_release(self->_q_send);
     case malloc_sends:
-        safe_release((void*)self->_q_recv_client);
-    case malloc_recvs:
-        safe_release((void*)self->_q_prior_seats_uint32);
+        safe_release(self->_q_work_events);
+    case malloc_works_events:
+        safe_release(self->_q_work);
+    case malloc_works:
+        safe_release(self->_q_prior_seats_uint32);
     case malloc_seats:
         safe_release(self->_nodes_client_buf);
     case malloc_clients_buffer:
@@ -159,12 +164,12 @@ STEP init_node(p_Server_original_t self)
     memset(self->_nodes_client_buf, 0, size_buffer);
 
 
-    uint32_t i = 0;
+    
     size_t size = 0;
-    while (i < self->size_client) {
+    for(uint32_t i = 0; i < self->size_client; i++) {
         self->_nodes_client[i].wsabuf.buf = self->_nodes_client_buf + size;
         self->_nodes_client[i].wsabuf.len = self->size_buffer;
-        i++;
+        self->_nodes_client[i].p_wol = &self->_nodes_client[i].wol;
         size += self->_nodes_client[i].wsabuf.len;
     }
     return done;
@@ -184,6 +189,7 @@ STEP init_queues(p_Server_original_t self)
     uint32_t datasize;
     size_t size;
 
+    // seats queue
     capacity = self->_capacity_seats;
     datasize = sizeof(uint32_t);
     size = sizeof(queue_t) + datasize * capacity;
@@ -196,29 +202,52 @@ STEP init_queues(p_Server_original_t self)
     //*(self->_q_prior_seats_uint32->_buffer) = (PCHAR) & self->_q_prior_seats_uint32[1];
     init_queue(self->_q_prior_seats_uint32, capacity, datasize);
 
-    capacity = self->_capacity_recvs;
+    // works queue
+    capacity = self->_capacity_works;
     datasize = sizeof(node_t);
     size = sizeof(queue_t) + datasize * capacity;
-    self->_q_recv_client = malloc(size);
-    if (self->_q_recv_client == NULL) {
-        return malloc_recvs;
+    self->_q_work = malloc(size);
+    if (self->_q_work == NULL) {
+        return malloc_works;
     }
-    memset(self->_q_recv_client, 0, size);
-    self->_q_recv_client->_buffer = (PCHAR)&self->_q_recv_client[1];
-    //*(self->_q_recv_client->_buffer) = (PCHAR) &self->_q_recv_client[1];
-    init_queue(self->_q_recv_client, capacity, datasize);
+    memset(self->_q_work, 0, size);
+    self->_q_work->_buffer = (PCHAR)&self->_q_work[1];
+    init_queue(self->_q_work, capacity, datasize);
 
+    // works events queue
+    capacity = self->_capacity_works;
+    datasize = sizeof(node_t);
+    size = sizeof(HANDLE) + datasize * capacity;
+    self->_q_work_events = malloc(size);
+    if (self->_q_work_events == NULL) {
+        return malloc_works_events;
+    }
+    memset(self->_q_work_events, 0, size);
+    self->_q_work_events->_buffer = (PCHAR)&self->_q_work_events[1];
+    init_queue(self->_q_work_events, capacity, datasize);
+
+    // sends queue
     capacity = self->_capacity_sends;
     datasize = sizeof(node_t);
     size = sizeof(queue_t) + datasize * capacity;
-    self->_q_send_client = malloc(size);
-    if (self->_q_send_client == NULL) {
+    self->_q_send = malloc(size);
+    if (self->_q_send == NULL) {
         return malloc_sends;
     }
-    self->_q_send_client->_buffer = (PCHAR)&self->_q_send_client[1];
-    //*(self->_q_send_client->_buffer) = (PCHAR)&self->_q_send_client[1];
-    init_queue(self->_q_send_client, capacity, datasize);
+    self->_q_send->_buffer = (PCHAR)&self->_q_send[1];
+    init_queue(self->_q_send, capacity, datasize);
 
+    // sends events queue
+    capacity = self->_capacity_works;
+    datasize = sizeof(node_t);
+    size = sizeof(HANDLE) + datasize * capacity;
+    self->_q_send_events = malloc(size);
+    if (self->_q_send_events == NULL) {
+        return malloc_works_events;
+    }
+    memset(self->_q_send_events, 0, size);
+    self->_q_send_events->_buffer = (PCHAR)&self->_q_send_events[1];
+    init_queue(self->_q_send_events, capacity, datasize);
     return done;
 }
 
@@ -288,7 +317,7 @@ STEP init_iocp(p_Server_original_t self)
     if (self->_iocp_cleanupgroup == NULL) {
         return iocp_create_cleanupgroup;
     }
-
+    
     for (uint32_t i = 0; i < n_iocp_threads; i++) {
         PTP_WORK work = CreateThreadpoolWork(self->_func_iocp, self, &CallBackEnviron);
         if (work == NULL) {
@@ -311,48 +340,59 @@ STEP init_iocp(p_Server_original_t self)
 }
 
 
-STEP init_recv(p_Server_original_t self)
+STEP init_work(p_Server_original_t self)
 {
-    DWORD n_recv_threads = self->_info.dwNumberOfProcessors / 4;
-    self->_recv_threadpool = CreateThreadpool(NULL);
-    if (self->_recv_threadpool == NULL) {
-        return recv_create_threadpool;
+    self->_n_work_threads = self->_info.dwNumberOfProcessors / 4;
+    self->_work_threadpool = CreateThreadpool(NULL);
+    if (self->_work_threadpool == NULL) {
+        return work_create_threadpool;
     }
 
-    SetThreadpoolThreadMaximum(self->_recv_threadpool, n_recv_threads);
-    SetThreadpoolThreadMinimum(self->_recv_threadpool, 1);
+    SetThreadpoolThreadMaximum(self->_work_threadpool, self->_n_work_threads);
+    SetThreadpoolThreadMinimum(self->_work_threadpool, 1);
 
-    self->_recv_cleanupgroup = CreateThreadpoolCleanupGroup();
+    self->_work_cleanupgroup = CreateThreadpoolCleanupGroup();
 
     TP_CALLBACK_ENVIRON CallBackEnviron;
     InitializeThreadpoolEnvironment(&CallBackEnviron);
 
-    SetThreadpoolCallbackPool(&CallBackEnviron, self->_recv_threadpool);
-    SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, self->_recv_cleanupgroup, NULL);
+    SetThreadpoolCallbackPool(&CallBackEnviron, self->_work_threadpool);
+    SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, self->_work_cleanupgroup, NULL);
 
-    if (self->_recv_cleanupgroup == NULL) {
-        return recv_create_cleanupgroup;
+    if (self->_work_cleanupgroup == NULL) {
+        return work_create_cleanupgroup;
     }
+    
+    self->_work_events = (PHANDLE) malloc(sizeof(HANDLE) * self->_n_work_threads);
+    for (uint32_t i = 0; i < self->_n_work_threads; i++) {
+        work_parameter param = { self->_q_work, self->_q_send, self->_q_work_events, NULL, &self->_terminate, &self->_stop };
+        self->_work_events[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
+        param.evt = self->_work_events[i];
+        p_work_parameter p_param = &param;
 
-    for (uint32_t i = 0; i < n_recv_threads; i++) {
-        PTP_WORK work = CreateThreadpoolWork(self->_func_recv, self, &CallBackEnviron);
+        PTP_WORK work = CreateThreadpoolWork(self->_func_work, p_param, &CallBackEnviron);
         if (work == NULL) {
-            return recv_create_work;
+            for (; i > 0; i--) {
+                CloseHandle(self->_work_events[i-1]);
+            }
+            return work_create_work;
         }
+
         SubmitThreadpoolWork(work);
+        self->_q_work_events->set_tail(self->_q_work_events, &self->_work_events[i]);
     }
     return done;
 }
 
 STEP init_send(p_Server_original_t self)
 {
-    DWORD n_send_threads = self->_info.dwNumberOfProcessors / 4;
+    self->_n_send_threads = self->_info.dwNumberOfProcessors / 4;
     self->_send_threadpool = CreateThreadpool(NULL);
     if (self->_send_threadpool == NULL) {
         return send_create_threadpool;
     }
 
-    SetThreadpoolThreadMaximum(self->_send_threadpool, n_send_threads);
+    SetThreadpoolThreadMaximum(self->_send_threadpool, self->_n_send_threads);
     SetThreadpoolThreadMinimum(self->_send_threadpool, 1);
 
     self->_send_cleanupgroup = CreateThreadpoolCleanupGroup();
@@ -367,13 +407,24 @@ STEP init_send(p_Server_original_t self)
         return send_create_cleanupgroup;
     }
 
-    for (uint32_t i = 0; i < n_send_threads; i++) {
-        PTP_WORK work = CreateThreadpoolWork(self->_func_send, self, &CallBackEnviron);
+    self->_send_events = (PHANDLE)malloc(sizeof(HANDLE) * self->_n_send_threads);
+    for (uint32_t i = 0; i < self->_n_send_threads; i++) {
+        send_parameter param = { self->_q_send, self->_q_send_events, NULL, &self->_terminate, &self->_stop };
+        self->_send_events[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
+        param.evt = self->_send_events[i];
+        p_send_parameter p_param = &param;
+
+        PTP_WORK work = CreateThreadpoolWork(self->_func_send, p_param, &CallBackEnviron);
         if (work == NULL) {
-            return send_create_work;
+            for (; i > 0; i--) {
+                CloseHandle(self->_send_events[i - 1]);
+            }
+            return work_create_work;
         }
         SubmitThreadpoolWork(work);
+        self->_q_work_events->set_tail(self->_q_work_events, &self->_work_events[i]);
     }
+
     return done;
 }
 

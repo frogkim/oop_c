@@ -15,51 +15,63 @@
     <Filter Include="asm">
       <UniqueIdentifier>{2b5f5947-3063-40d7-9bcc-308d3bbfa49d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src_windows\server">
+      <UniqueIdentifier>{65a011e7-0bb5-47e6-9a37-906c8d377b47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src_windows\client">
+      <UniqueIdentifier>{94a15ef3-6750-43ba-9d17-99c56e269c05}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libchat.h">
       <Filter>header</Filter>
     </ClInclude>
-    <ClInclude Include="libchat_internal.h">
+    <ClInclude Include="libchat_server.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="libchat_client.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="libchat_common.h">
       <Filter>header</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="server_listen.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="server_iocp.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="create_server.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="server_initilization.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="server_recv.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="server_send.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
     <ClCompile Include="queue.c">
       <Filter>src_windows</Filter>
     </ClCompile>
-    <ClCompile Include="create_client.c">
-      <Filter>src_windows</Filter>
-    </ClCompile>
-    <ClCompile Include="clients_thread_functions.c">
-      <Filter>src_windows</Filter>
+    <ClCompile Include="client_configuration.c">
+      <Filter>src_windows\client</Filter>
     </ClCompile>
     <ClCompile Include="client_initilization.c">
-      <Filter>src_windows</Filter>
+      <Filter>src_windows\client</Filter>
+    </ClCompile>
+    <ClCompile Include="clients_thread_functions.c">
+      <Filter>src_windows\client</Filter>
+    </ClCompile>
+    <ClCompile Include="create_client.c">
+      <Filter>src_windows\client</Filter>
+    </ClCompile>
+    <ClCompile Include="create_server.c">
+      <Filter>src_windows\server</Filter>
     </ClCompile>
     <ClCompile Include="server_configuration.c">
-      <Filter>src_windows</Filter>
+      <Filter>src_windows\server</Filter>
     </ClCompile>
-    <ClCompile Include="client_configuration.c">
-      <Filter>src_windows</Filter>
+    <ClCompile Include="server_initilization.c">
+      <Filter>src_windows\server</Filter>
+    </ClCompile>
+    <ClCompile Include="server_iocp.c">
+      <Filter>src_windows\server</Filter>
+    </ClCompile>
+    <ClCompile Include="server_listen.c">
+      <Filter>src_windows\server</Filter>
+    </ClCompile>
+    <ClCompile Include="server_work.c">
+      <Filter>src_windows\server</Filter>
+    </ClCompile>
+    <ClCompile Include="server_send.c">
+      <Filter>src_windows\server</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

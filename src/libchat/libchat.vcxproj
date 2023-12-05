@@ -151,7 +151,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="libchat.h" />
-    <ClInclude Include="libchat_internal.h" />
+    <ClInclude Include="libchat_client.h" />
+    <ClInclude Include="libchat_common.h" />
+    <ClInclude Include="libchat_server.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="client_configuration.c" />
@@ -163,7 +165,7 @@
     <ClCompile Include="server_iocp.c" />
     <ClCompile Include="server_listen.c" />
     <ClCompile Include="queue.c" />
-    <ClCompile Include="server_recv.c" />
+    <ClCompile Include="server_work.c" />
     <ClCompile Include="server_send.c" />
     <ClCompile Include="server_configuration.c" />
   </ItemGroup>

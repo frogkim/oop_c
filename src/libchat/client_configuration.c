@@ -1,4 +1,4 @@
-#include "libchat_internal.h"
+#include "libchat_client.h"
 #ifdef LINUX
 #else
 static BOOL set_ip_port(PSOCKADDR_IN p_sockaddr, PCHAR ip_or_null, USHORT port);

@@ -4,8 +4,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.8.34309.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "src\client\client.vcxproj", "{91E7A4D8-1C28-480B-B6F1-6277675378B3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657} = {21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "server", "src\server\server.vcxproj", "{2B12E479-94AC-4C0A-8C74-7B5F2B742390}"
+	ProjectSection(ProjectDependencies) = postProject
+		{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657} = {21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libchat", "src\libchat\libchat.vcxproj", "{21DEC8B5-E8DE-4BB6-8C7D-8F16A6467657}"
 EndProject

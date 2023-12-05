@@ -1,4 +1,4 @@
-#include "libchat_internal.h"
+#include "libchat_common.h"
 
 #ifdef LINUX
 #else

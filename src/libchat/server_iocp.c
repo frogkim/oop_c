@@ -1,4 +1,4 @@
-#include "libchat_internal.h"
+#include "libchat_server.h"
 
 
 #ifdef LINUX
@@ -10,13 +10,10 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
     p_Server_original_t self = pParam;
 
     HANDLE          h_iocp = self->_h_iocp;
-    p_queue_t       p_seat_queue = self->_q_prior_seats_uint32;
-    p_queue_t       p_recv_queue = self->_q_recv_client;
-    p_queue_t       p_send_queue = self->_q_send_client;
-    HANDLE          recv_evt = self->_evt_recv;
-    HANDLE          send_evt = self->_evt_send;
-    PKEYHOLDER      p_keyholder_recv = &self->_keyholder_recv;
-
+    HANDLE          evt = NULL;
+    p_queue_t       p_seat = self->_q_prior_seats_uint32;
+    p_queue_t       p_work = self->_q_work;
+    p_queue_t       p_work_evt_queue = self->_q_work_events;
     DWORD			size_transfer = 0;
     node_t client;
     p_node_t p_client = &client;
@@ -24,18 +21,18 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
     BOOL			result;
     while (TRUE) {
         // TODO: investigate about result
-        result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)p_client, (LPOVERLAPPED*)&p_client->wol, INFINITE);
+        result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)p_client, &p_client->p_wol, INFINITE);
 
         if (result == TRUE) {
             if (size_transfer > 0) {
                 // normal. create iocp again
                 // queue has its own critical section
-                p_recv_queue->set_tail(p_send_queue, &client);
-                spin_lock(p_keyholder_recv);
-                SetEvent(recv_evt);
-                spin_unlock(p_keyholder_recv);
-                WSARecv(client.socket, &client.wsabuf, 1, &client.n_recv, &client.flag, &client.wol, NULL);
+                p_work->set_tail(p_work, &client);
+                p_work_evt_queue->get_front(p_work_evt_queue, &evt);
+                SetEvent(evt);
+                WSARecv(client.socket, &client.wsabuf, 1, &client.n_recv, &client.flag, client.p_wol, NULL);
 #ifdef DEBUG
+                puts("Received from client");
                 assert(WSAGetLastError() != WSA_IO_PENDING);
 #endif // DEBUG
             } else {
@@ -45,14 +42,16 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
 #endif // DEBUG
                 shutdown(client.socket, SD_BOTH);
                 closesocket(client.socket);
-                p_seat_queue->set_tail(p_seat_queue, &client.index);
+                p_seat->set_tail(p_seat, &client.index);
             }
         } else {
             // disconnected
 #ifdef DEBUG
             printf("client: %d is disconnected unexpectedly.\n", client.index);
 #endif // DEBUG
-            p_seat_queue->set_tail(p_seat_queue, &client.index);
+            shutdown(client.socket, SD_BOTH);
+            closesocket(client.socket);
+            p_seat->set_tail(p_seat, &client.index);
 
             //if (p_wol == NULL) {
             //    // failed to get packet or IOCP handle closed

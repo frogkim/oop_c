@@ -1,6 +1,6 @@
 // init_deinit_server.c
 // 
-#include "libchat_internal.h"
+#include "libchat_client.h"
 #ifdef LINUX
 #else
 typedef enum _step {
