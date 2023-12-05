@@ -12,6 +12,7 @@ void _func_work_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
     p_queue_t p_work_events = p_param->q_work_events;
 
     HANDLE evt = p_param->evt;
+    PHANDLE p_evt = &evt;
 
     DWORD dw_event;
     node_t client;
@@ -33,7 +34,7 @@ void _func_work_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
 
                 // stack sending queue
                 p_send->set_tail(p_send, &client);
-                p_work_events->set_tail(p_work_events, &evt);
+                p_work_events->set_tail(p_work_events, p_evt);
 #ifdef DEBUG
                 puts("ready for replying to client");
 #endif // DEBUG

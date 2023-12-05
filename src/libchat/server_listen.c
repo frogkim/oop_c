@@ -22,6 +22,11 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
     // TODO: WSAaccept function conditionally accepts. Find it.
     while ((h_client = accept(s_listen, &ClientAddr, &nAddrSize)) != INVALID_SOCKET)
     {
+#ifdef DEBUG
+        puts("client connected");
+#endif // DEBUG
+
+
         if (p_seat_queue->size > 0) {
             p_seat_queue->get_front(p_seat_queue, &index);
         } else {
@@ -31,7 +36,8 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
 
         clients[index].socket = h_client;
         memset(clients[index].wsabuf.buf, 0, self->size_buffer);
-        clients[index].p_wol = NULL;
+        memset(&clients[index].wol, 0, sizeof(WSAOVERLAPPED));
+        clients[index].p_wol = &clients[index].wol;
         clients[index].n_recv = 0;
         clients[index].flag = 0;
 
@@ -45,7 +51,7 @@ DWORD CALLBACK _func_listen_server(LPVOID pParam)
             NULL                        // callback
         );
 #ifdef DEBUG
-        puts("client connected");
+        int result = WSAGetLastError();
         assert(WSAGetLastError() == WSA_IO_PENDING);
 #endif // DEBUG
     }

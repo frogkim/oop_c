@@ -36,7 +36,7 @@ int main(int argv, char** argc)
         switch (ch) {
         case 'q': 
             puts("quit");
-            break;
+            goto END;
 
         case 'c':
             puts("tried connect");
@@ -57,7 +57,7 @@ int main(int argv, char** argc)
 
 
         case 's':
-            printf("you enter: %s\n", buf);
+            printf("you enter: ");
             int n = scanf("%s", buf);
             c->send_async(c, buf);
             puts("Sent asynchronously");
@@ -75,7 +75,7 @@ int main(int argv, char** argc)
         }
 
     }
-
+END:
 
 
 

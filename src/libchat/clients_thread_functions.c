@@ -14,11 +14,14 @@ DWORD CALLBACK _func_recv_client(LPVOID pParam)
     DWORD flag = 0;
 
     WSABUF wsabuf;
-    CHAR* memblock = (CHAR*)malloc(self->size_buffer);
-    wsabuf.buf = memblock;
+    memset(&wsabuf, 0, sizeof(WSABUF));
+    wsabuf.buf = malloc(self->size_buffer);
+    memset(wsabuf.buf, 0, self->size_buffer);
     wsabuf.len = self->size_buffer;
 
-    LPWSAOVERLAPPED p_wol = NULL;
+    //WSAOVERLAPPED wol;
+    //memset(&wol, 0, sizeof(WSAOVERLAPPED));
+    //LPWSAOVERLAPPED p_wol = &wol;
 
     while (TRUE) {
         //dw_event = WaitForSingleObject(recv_evt, INFINITE);
@@ -26,7 +29,8 @@ DWORD CALLBACK _func_recv_client(LPVOID pParam)
             break;
         }
         while (TRUE) {
-            dw_size_recv = recv(self->_socket, memblock, self->size_buffer, 0);
+            // synchronized receive
+            dw_size_recv = recv(self->_socket, wsabuf.buf, self->size_buffer, 0);
             //WSARecv(self->_socket, &wsabuf, 1, &dw_size_recv, &flag,  &wol, NULL);
             if (dw_size_recv == 0) {
                 break;
@@ -43,7 +47,7 @@ DWORD CALLBACK _func_recv_client(LPVOID pParam)
         }
     }
 FINISH_FUNC_RECV_CLIENT:
-    safe_release(memblock);
+    safe_release(wsabuf.buf);
     return 0;
 }
 
@@ -57,7 +61,10 @@ DWORD CALLBACK _func_send_client(LPVOID pParam)
     WSABUF wsabuf;
     wsabuf.buf = malloc(self->size_buffer);
     wsabuf.len = self->size_buffer;
-    LPWSAOVERLAPPED p_wol = NULL;
+
+    WSAOVERLAPPED wol;
+    memset(&wol, 0, sizeof(WSAOVERLAPPED));
+    LPWSAOVERLAPPED p_wol = &wol;
     
     DWORD dw_event;
     DWORD dw_size_sent;
@@ -75,9 +82,10 @@ DWORD CALLBACK _func_send_client(LPVOID pParam)
                 if (p_send->get_front(p_send, wsabuf.buf)) {
                     WSASend(self->_socket, &wsabuf, 1, &dw_size_sent, flag, p_wol, NULL);
 #ifdef DEBUG
-                    puts("WSASend tried.");
                     int result = WSAGetLastError();
-                    assert(WSAGetLastError() != WSA_IO_PENDING);
+                    puts("WSASend tried.");
+                    printf("WSASend result: %d\n", result);
+                    //assert(WSAGetLastError() == WSA_IO_PENDING);
 #endif // DEBUG
                 }
             } else {

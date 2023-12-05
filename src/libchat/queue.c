@@ -16,8 +16,8 @@ BOOL init_queue(p_queue_t self, uint32_t capacity, uint32_t data_size)
     self->front = 0;
     self->tail = 0;
     self->size = 0;
-    self->_capacity = capacity;
-    self->_data_size = data_size;
+    self->capacity = capacity;
+    self->data_size = data_size;
     self->set_tail = _set_tail;
     self->get_front = _get_front;
 #ifdef LINUX
@@ -47,7 +47,7 @@ void deinit_queue(p_queue_t self)
 
 BOOL _set_tail(p_queue_t self, const void* data_in)
 {
-    if (self->size == self->_capacity) {
+    if (self->size == self->capacity) {
         return FALSE;
     }
 
@@ -57,11 +57,11 @@ BOOL _set_tail(p_queue_t self, const void* data_in)
 #else
     EnterCriticalSection(&self->_cs);
 #endif
-    memcpy(self->_buffer + (self->_data_size * self->tail), data_in, self->_data_size);
+    memcpy(self->_buffer + (self->data_size * self->tail), data_in, self->data_size);
     self->tail++;
     self->size++;
 
-    if (self->tail == self->_capacity) {
+    if (self->tail == self->capacity) {
         self->tail = 0;
     }
 
@@ -84,10 +84,10 @@ BOOL _get_front(p_queue_t self, void* data_out)
 #else
     EnterCriticalSection(&self->_cs);
 #endif
-    memcpy(data_out, self->_buffer + (self->_data_size * self->front), self->_data_size);
+    memcpy(data_out, self->_buffer + (self->data_size * self->front), self->data_size);
     self->front++;
     self->size--;
-    if (self->front == self->_capacity) {
+    if (self->front == self->capacity) {
         self->front = 0;
     }
 #ifdef LINUX

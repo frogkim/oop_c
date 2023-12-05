@@ -7,7 +7,6 @@
 typedef enum _step {
     done,
     malloc_clients,
-    malloc_clients_buffer,
     malloc_seats,
     malloc_works,
     malloc_works_events,
@@ -139,8 +138,6 @@ VOID release_server(p_Server_original_t self, STEP step)
     case malloc_works:
         safe_release(self->_q_prior_seats_uint32);
     case malloc_seats:
-        safe_release(self->_nodes_client_buf);
-    case malloc_clients_buffer:
         safe_release(self->_nodes_client);
     case malloc_clients:
         break;
@@ -149,28 +146,16 @@ VOID release_server(p_Server_original_t self, STEP step)
 
 STEP init_node(p_Server_original_t self)
 {
-    size_t size_nodes = sizeof(node_t) * (uint64_t)self->size_client;
-    self->_nodes_client = (p_node_t)malloc(size_nodes);
+    size_t size = sizeof(node_t) * self->size_client;
+    self->_nodes_client = (p_node_t)malloc(size);
     if (self->_nodes_client == NULL) {
         return malloc_clients;
     }
-    memset(self->_nodes_client, 0, size_nodes);
-
-    size_t size_buffer = self->size_buffer * self->size_client;
-    self->_nodes_client_buf = (CHAR*)malloc(size_buffer);
-    if (self->_nodes_client_buf == NULL) {
-        return malloc_clients_buffer;
-    }
-    memset(self->_nodes_client_buf, 0, size_buffer);
-
-
-    
-    size_t size = 0;
+    memset(self->_nodes_client, 0, size);
     for(uint32_t i = 0; i < self->size_client; i++) {
-        self->_nodes_client[i].wsabuf.buf = self->_nodes_client_buf + size;
-        self->_nodes_client[i].wsabuf.len = self->size_buffer;
+        self->_nodes_client[i].wsabuf.buf = self->_nodes_client[i]._buffer;
+        self->_nodes_client[i].wsabuf.len = NODE_BUFFER_SIZE;
         self->_nodes_client[i].p_wol = &self->_nodes_client[i].wol;
-        size += self->_nodes_client[i].wsabuf.len;
     }
     return done;
 }
@@ -410,10 +395,12 @@ STEP init_send(p_Server_original_t self)
     self->_send_events = (PHANDLE)malloc(sizeof(HANDLE) * self->_n_send_threads);
     for (uint32_t i = 0; i < self->_n_send_threads; i++) {
         send_parameter param = { self->_q_send, self->_q_send_events, NULL, &self->_terminate, &self->_stop };
+        p_send_parameter p_param = &param;
+        
         self->_send_events[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
         param.evt = self->_send_events[i];
-        p_send_parameter p_param = &param;
-
+        self->_q_send_events->set_tail(self->_q_send_events, &self->_send_events[i]);
+        
         PTP_WORK work = CreateThreadpoolWork(self->_func_send, p_param, &CallBackEnviron);
         if (work == NULL) {
             for (; i > 0; i--) {
@@ -422,7 +409,6 @@ STEP init_send(p_Server_original_t self)
             return work_create_work;
         }
         SubmitThreadpoolWork(work);
-        self->_q_work_events->set_tail(self->_q_work_events, &self->_work_events[i]);
     }
 
     return done;
