@@ -6,18 +6,16 @@ void _func_send_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
 {
     UNREFERENCED_PARAMETER(instance);
     UNREFERENCED_PARAMETER(work);
-    p_send_parameter p_param = (p_send_parameter)pParam;
+    p_send_parameter_t p_param = (p_send_parameter_t)pParam;
     p_queue_t p_send = p_param->q_send;
     p_queue_t p_send_events = p_param->q_send_events;
-    HANDLE evt = p_param->evt;
-
     node_t          client;
     p_node_t        p_client = &client;
     
     DWORD dw_event;
     DWORD dw_size_sent;
     while (TRUE) {
-        dw_event = WaitForSingleObject(evt, INFINITE);
+        dw_event = WaitForSingleObject(p_param->evt, INFINITE);
         if (p_param->terminate) {
             break;
         }
@@ -28,7 +26,7 @@ void _func_send_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
                 break;
             }
             WSASend(client.socket, &client.wsabuf, 1, &dw_size_sent, client.flag, client.p_wol, NULL);
-            p_send_events->set_tail(p_send_events, &evt);
+            p_send_events->set_tail(p_send_events, &p_param->evt);
 #ifdef DEBUG
             puts("sent back to client");
             assert(WSAGetLastError() != WSA_IO_PENDING);

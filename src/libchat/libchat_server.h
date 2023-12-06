@@ -3,10 +3,11 @@ typedef struct _work_parameter {
     p_queue_t q_work;
     p_queue_t q_send;
     p_queue_t q_work_events;
+    p_queue_t q_send_events;
     HANDLE evt;
     BOOL* terminate;
     BOOL* stop;
-}work_parameter, *p_work_parameter;
+}work_parameter_t, *p_work_parameter_t;
 
 typedef struct _send_parameter {
     p_queue_t q_send;
@@ -14,7 +15,7 @@ typedef struct _send_parameter {
     HANDLE evt;
     BOOL* terminate;
     BOOL* stop;
-}send_parameter, * p_send_parameter;
+}send_parameter_t, * p_send_parameter_t;
 
 typedef struct _server_original {
 
@@ -42,8 +43,6 @@ typedef struct _server_original {
     PTP_WORK_CALLBACK _func_send;
 
     p_node_t _nodes_client;
-    CHAR* _nodes_client_buf;
-
     p_queue_t _q_prior_seats_uint32;
     p_queue_t _q_work;
     p_queue_t _q_send;
@@ -63,9 +62,11 @@ typedef struct _server_original {
 
     PTP_POOL _work_threadpool;
     PTP_CLEANUP_GROUP _work_cleanupgroup;
+    p_work_parameter_t work_parameters;
 
     PTP_POOL _send_threadpool;
     PTP_CLEANUP_GROUP _send_cleanupgroup;
+    p_send_parameter_t send_parameters;
 } Server_original_t, * p_Server_original_t;
 
 // initialize

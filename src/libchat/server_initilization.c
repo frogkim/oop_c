@@ -3,6 +3,7 @@
 #include "libchat_server.h"
 #ifdef LINUX
 #else
+#pragma warning(disable : 4996)
 
 typedef enum _step {
     done,
@@ -56,13 +57,7 @@ BOOL _init_server(p_Server_t _self)
     }
 
     result = init_listen(self);
-    if (result != done) {
-        release_server(self, result);
-        return FALSE;
-    }
-
-    result = init_iocp(self);
-    if (result != done) {
+     if (result != done) {
         release_server(self, result);
         return FALSE;
     }
@@ -79,8 +74,14 @@ BOOL _init_server(p_Server_t _self)
         return FALSE;
     }
 
+    result = init_iocp(self);
+    if (result != done) {
+        release_server(self, result);
+        return FALSE;
+    }
+
     return TRUE;
-}
+ }
 
 
 BOOL _deinit_server(p_Server_t _self)
@@ -98,13 +99,20 @@ VOID release_server(p_Server_original_t self, STEP step)
     switch (step) { // intended cascade
     case all_release:
         // no work for send_work
+    case iocp_create_work:
+        CloseThreadpoolCleanupGroupMembers(self->_iocp_cleanupgroup, FALSE, NULL);
+        CloseThreadpoolCleanupGroup(self->_iocp_cleanupgroup);
+    case iocp_create_cleanupgroup:
+        CloseThreadpool(self->_iocp_threadpool);
+    case iocp_create_threadpool:
+        safe_release(self->send_parameters);
     case send_create_work:
         CloseThreadpoolCleanupGroupMembers(self->_send_cleanupgroup, FALSE, NULL);
         CloseThreadpoolCleanupGroup(self->_send_cleanupgroup);
     case send_create_cleanupgroup:
         CloseThreadpool(self->_send_threadpool);
     case send_create_threadpool:
-        // no work for recv_work
+        safe_release(self->work_parameters);
     case work_create_work:
         safe_release(self->_work_events);
         CloseThreadpoolCleanupGroupMembers(self->_work_cleanupgroup, FALSE, NULL);
@@ -112,13 +120,7 @@ VOID release_server(p_Server_original_t self, STEP step)
     case work_create_cleanupgroup:
         CloseThreadpool(self->_work_threadpool);
     case work_create_threadpool:
-        // no work for iocp_work
-    case iocp_create_work:
-        CloseThreadpoolCleanupGroupMembers(self->_iocp_cleanupgroup, FALSE, NULL);
-        CloseThreadpoolCleanupGroup(self->_iocp_cleanupgroup);
-    case iocp_create_cleanupgroup:
-        CloseThreadpool(self->_iocp_threadpool);
-    case iocp_create_threadpool:
+
         CloseHandle(self->_h_iocp);
     case iocp_create:
         CloseHandle(self->_h_listen_thread);
@@ -138,6 +140,8 @@ VOID release_server(p_Server_original_t self, STEP step)
     case malloc_works:
         safe_release(self->_q_prior_seats_uint32);
     case malloc_seats:
+        safe_release(self->_send_events);
+        safe_release(self->_work_events);
         safe_release(self->_nodes_client);
     case malloc_clients:
         break;
@@ -156,6 +160,27 @@ STEP init_node(p_Server_original_t self)
         self->_nodes_client[i].wsabuf.buf = self->_nodes_client[i]._buffer;
         self->_nodes_client[i].wsabuf.len = NODE_BUFFER_SIZE;
         self->_nodes_client[i].p_wol = &self->_nodes_client[i].wol;
+    }
+
+    DWORD n_iocp_threads = self->_info.dwNumberOfProcessors / 4;
+    WCHAR event_name[20] = { 0 };
+    self->_n_send_threads = n_iocp_threads;
+    self->_n_work_threads = n_iocp_threads;
+    self->_work_events = (PHANDLE)malloc(sizeof(HANDLE) * self->_n_send_threads);
+    self->_send_events = (PHANDLE)malloc(sizeof(HANDLE) * self->_n_work_threads);
+    
+    memset(event_name, 0, sizeof(WCHAR) * 20);
+    wcscpy(event_name, TEXT("work_"));
+    for (uint32_t i = 0; i < self->_n_work_threads; i++) {
+        event_name[5] = i + '0';
+        self->_work_events[i] = CreateEvent(NULL, FALSE, FALSE, event_name);
+    }
+
+    memset(event_name, 0, sizeof(WCHAR) * 20);
+    wcscpy(event_name, TEXT("send_"));
+    for (uint32_t i = 0; i < self->_n_send_threads; i++) {
+        event_name[5] = i + '0';
+        self->_send_events[i] = CreateEvent(NULL, FALSE, FALSE, event_name);
     }
     return done;
 }
@@ -201,8 +226,8 @@ STEP init_queues(p_Server_original_t self)
 
     // works events queue
     capacity = self->_capacity_works;
-    datasize = sizeof(node_t);
-    size = sizeof(HANDLE) + datasize * capacity;
+    datasize = sizeof(HANDLE);
+    size = sizeof(queue_t) + datasize * capacity;
     self->_q_work_events = malloc(size);
     if (self->_q_work_events == NULL) {
         return malloc_works_events;
@@ -219,13 +244,14 @@ STEP init_queues(p_Server_original_t self)
     if (self->_q_send == NULL) {
         return malloc_sends;
     }
+    memset(self->_q_send, 0, size);
     self->_q_send->_buffer = (PCHAR)&self->_q_send[1];
     init_queue(self->_q_send, capacity, datasize);
 
     // sends events queue
     capacity = self->_capacity_works;
-    datasize = sizeof(node_t);
-    size = sizeof(HANDLE) + datasize * capacity;
+    datasize = sizeof(HANDLE);
+    size = sizeof(queue_t) + datasize * capacity;
     self->_q_send_events = malloc(size);
     if (self->_q_send_events == NULL) {
         return malloc_works_events;
@@ -233,6 +259,19 @@ STEP init_queues(p_Server_original_t self)
     memset(self->_q_send_events, 0, size);
     self->_q_send_events->_buffer = (PCHAR)&self->_q_send_events[1];
     init_queue(self->_q_send_events, capacity, datasize);
+
+    
+    for (uint32_t i = 0; i < self->_n_work_threads; i++) {
+        self->_q_work_events->set_tail(self->_q_work_events, &self->_work_events[i]);
+    }
+    self->work_parameters = malloc(sizeof(work_parameter_t) * self->_n_work_threads);
+    memset(self->work_parameters, 0, sizeof(work_parameter_t) * self->_n_work_threads);
+
+    for (uint32_t i = 0; i < self->_n_send_threads; i++) {
+        self->_q_send_events->set_tail(self->_q_send_events, &self->_send_events[i]);
+    }
+    self->send_parameters = malloc(sizeof(send_parameter_t) * self->_n_send_threads);
+    memset(self->send_parameters, 0, sizeof(send_parameter_t) * self->_n_work_threads);
     return done;
 }
 
@@ -347,25 +386,26 @@ STEP init_work(p_Server_original_t self)
     if (self->_work_cleanupgroup == NULL) {
         return work_create_cleanupgroup;
     }
-    
-    self->_work_events = (PHANDLE) malloc(sizeof(HANDLE) * self->_n_work_threads);
-    for (uint32_t i = 0; i < self->_n_work_threads; i++) {
-        work_parameter param = { self->_q_work, self->_q_send, self->_q_work_events, NULL, &self->_terminate, &self->_stop };
-        self->_work_events[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
-        param.evt = self->_work_events[i];
-        p_work_parameter p_param = &param;
 
-        PTP_WORK work = CreateThreadpoolWork(self->_func_work, p_param, &CallBackEnviron);
+    for (uint32_t i = 0; i < self->_n_work_threads; i++) {
+        self->work_parameters->q_work = self->_q_work;
+        self->work_parameters->q_send = self->_q_send;
+        self->work_parameters->q_work_events = self->_q_work_events;
+        self->work_parameters->q_send_events = self->_q_send_events;
+        self->work_parameters->evt = self->_work_events[i];
+        self->work_parameters->terminate = &self->_terminate;
+        self->work_parameters->stop = &self->_stop;
+
+        PTP_WORK work = CreateThreadpoolWork(self->_func_work, self->work_parameters, &CallBackEnviron);
         if (work == NULL) {
             for (; i > 0; i--) {
                 CloseHandle(self->_work_events[i-1]);
             }
             return work_create_work;
         }
-
         SubmitThreadpoolWork(work);
-        self->_q_work_events->set_tail(self->_q_work_events, &self->_work_events[i]);
     }
+
     return done;
 }
 
@@ -392,16 +432,13 @@ STEP init_send(p_Server_original_t self)
         return send_create_cleanupgroup;
     }
 
-    self->_send_events = (PHANDLE)malloc(sizeof(HANDLE) * self->_n_send_threads);
     for (uint32_t i = 0; i < self->_n_send_threads; i++) {
-        send_parameter param = { self->_q_send, self->_q_send_events, NULL, &self->_terminate, &self->_stop };
-        p_send_parameter p_param = &param;
-        
-        self->_send_events[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
-        param.evt = self->_send_events[i];
-        self->_q_send_events->set_tail(self->_q_send_events, &self->_send_events[i]);
-        
-        PTP_WORK work = CreateThreadpoolWork(self->_func_send, p_param, &CallBackEnviron);
+        self->send_parameters->q_send = self->_q_send;
+        self->send_parameters->q_send_events = self->_q_send_events;
+        self->send_parameters->evt = self->_work_events[i];
+        self->send_parameters->terminate = &self->_terminate;
+        self->send_parameters->stop = &self->_stop; 
+        PTP_WORK work = CreateThreadpoolWork(self->_func_send, self, &CallBackEnviron);
         if (work == NULL) {
             for (; i > 0; i--) {
                 CloseHandle(self->_send_events[i - 1]);

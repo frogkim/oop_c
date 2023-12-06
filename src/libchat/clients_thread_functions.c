@@ -84,7 +84,6 @@ DWORD CALLBACK _func_send_client(LPVOID pParam)
 #ifdef DEBUG
                     int result = WSAGetLastError();
                     puts("WSASend tried.");
-                    printf("WSASend result: %d\n", result);
                     //assert(WSAGetLastError() == WSA_IO_PENDING);
 #endif // DEBUG
                 }

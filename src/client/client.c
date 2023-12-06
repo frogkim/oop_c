@@ -30,7 +30,19 @@ int main(int argv, char** argc)
 
     char buf[8192];
     memset(buf, 0, 8192);
-    
+
+    puts("tried connect");
+    if (!c->connect(c)) {
+        puts("Failed to connect");
+        return 1;
+    }
+    puts("Success to connect");
+
+    printf("you enter: ");
+    int n = scanf("%s", buf);
+    c->send_async(c, buf);
+    puts("Sent asynchronously");
+
     while (1) {
         char ch = getchar();
         switch (ch) {
