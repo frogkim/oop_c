@@ -36,7 +36,7 @@ DWORD CALLBACK _func_recv_client(LPVOID pParam)
                 break;
             }
 #ifdef DEBUG
-            puts("Recv tried.");
+            puts("Received.");
             //int result = WSAGetLastError();
             //assert(result == WSA_IO_PENDING);
 #endif // DEBUG

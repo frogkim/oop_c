@@ -16,13 +16,20 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
 
     HANDLE          evt = NULL;
     DWORD			size_transfer = 0;
-    node_t client;
-    p_node_t p_client = &client;
-    
+    //node_t client;
+    //p_node_t p_client = &client;
+
+    WSAOVERLAPPED wol;
+    memset(&wol, 0, sizeof(WSAOVERLAPPED));
+    LPWSAOVERLAPPED p_wol = &wol;
+
+    p_node_t p_client = NULL;
+
     BOOL			result;
     while (TRUE) {
         // TODO: investigate about result
-        result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)&p_client, &p_client->p_wol, INFINITE);
+        //result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)&p_client, &p_client->p_wol, INFINITE);
+        result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)&p_client, &p_wol, INFINITE);
 #ifdef DEBUG
         puts("Received from client");
 #endif // DEBUG
@@ -67,6 +74,9 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
             //}
         }
     }
+#ifdef DEBUG
+    puts("IOCP functions ends");
+#endif // DEBUG
 }
 
 #endif

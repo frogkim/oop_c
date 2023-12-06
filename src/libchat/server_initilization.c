@@ -224,18 +224,6 @@ STEP init_queues(p_Server_original_t self)
     self->_q_work->_buffer = (PCHAR)&self->_q_work[1];
     init_queue(self->_q_work, capacity, datasize);
 
-    // works events queue
-    capacity = self->_capacity_works;
-    datasize = sizeof(HANDLE);
-    size = sizeof(queue_t) + datasize * capacity;
-    self->_q_work_events = malloc(size);
-    if (self->_q_work_events == NULL) {
-        return malloc_works_events;
-    }
-    memset(self->_q_work_events, 0, size);
-    self->_q_work_events->_buffer = (PCHAR)&self->_q_work_events[1];
-    init_queue(self->_q_work_events, capacity, datasize);
-
     // sends queue
     capacity = self->_capacity_sends;
     datasize = sizeof(node_t);
@@ -248,8 +236,20 @@ STEP init_queues(p_Server_original_t self)
     self->_q_send->_buffer = (PCHAR)&self->_q_send[1];
     init_queue(self->_q_send, capacity, datasize);
 
+    // works events queue
+    capacity = self->_info.dwNumberOfProcessors / 4;
+    datasize = sizeof(HANDLE);
+    size = sizeof(queue_t) + datasize * capacity;
+    self->_q_work_events = malloc(size);
+    if (self->_q_work_events == NULL) {
+        return malloc_works_events;
+    }
+    memset(self->_q_work_events, 0, size);
+    self->_q_work_events->_buffer = (PCHAR)&self->_q_work_events[1];
+    init_queue(self->_q_work_events, capacity, datasize);
+
     // sends events queue
-    capacity = self->_capacity_works;
+    capacity = self->_info.dwNumberOfProcessors / 4;
     datasize = sizeof(HANDLE);
     size = sizeof(queue_t) + datasize * capacity;
     self->_q_send_events = malloc(size);
@@ -272,6 +272,7 @@ STEP init_queues(p_Server_original_t self)
     }
     self->send_parameters = malloc(sizeof(send_parameter_t) * self->_n_send_threads);
     memset(self->send_parameters, 0, sizeof(send_parameter_t) * self->_n_work_threads);
+
     return done;
 }
 
@@ -302,6 +303,17 @@ STEP init_listen(p_Server_original_t self)
         return socket_bind;
     }
 
+    DWORD n_iocp_threads = self->_info.dwNumberOfProcessors / 4;
+
+    // set iocp
+    self->_h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, n_iocp_threads);
+    if (self->_h_iocp == NULL) {
+#ifdef DEBUG
+        puts("Failed to create iocp");
+#endif // DEBUG
+        return iocp_create;
+    }
+
     // run threads
     self->_h_listen_thread = CreateThread(NULL, 0, self->_func_listen, self, 0, NULL);
     if (self->_h_listen_thread == NULL) {
@@ -315,13 +327,6 @@ STEP init_listen(p_Server_original_t self)
 STEP init_iocp(p_Server_original_t self)
 {
     DWORD n_iocp_threads = self->_info.dwNumberOfProcessors / 4;
-
-    // set iocp
-    self->_h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, n_iocp_threads);
-    if (self->_h_iocp == NULL) {
-        return iocp_create;
-    }
-
     self->_iocp_threadpool = CreateThreadpool(NULL);
     if (self->_iocp_threadpool == NULL) {
         return iocp_create_threadpool;
@@ -392,7 +397,7 @@ STEP init_work(p_Server_original_t self)
         self->work_parameters->q_send = self->_q_send;
         self->work_parameters->q_work_events = self->_q_work_events;
         self->work_parameters->q_send_events = self->_q_send_events;
-        self->work_parameters->evt = self->_work_events[i];
+        
         self->work_parameters->terminate = &self->_terminate;
         self->work_parameters->stop = &self->_stop;
 
@@ -435,10 +440,10 @@ STEP init_send(p_Server_original_t self)
     for (uint32_t i = 0; i < self->_n_send_threads; i++) {
         self->send_parameters->q_send = self->_q_send;
         self->send_parameters->q_send_events = self->_q_send_events;
-        self->send_parameters->evt = self->_work_events[i];
+        
         self->send_parameters->terminate = &self->_terminate;
         self->send_parameters->stop = &self->_stop; 
-        PTP_WORK work = CreateThreadpoolWork(self->_func_send, self, &CallBackEnviron);
+        PTP_WORK work = CreateThreadpoolWork(self->_func_send, self->send_parameters, &CallBackEnviron);
         if (work == NULL) {
             for (; i > 0; i--) {
                 CloseHandle(self->_send_events[i - 1]);

@@ -4,7 +4,6 @@ typedef struct _work_parameter {
     p_queue_t q_send;
     p_queue_t q_work_events;
     p_queue_t q_send_events;
-    HANDLE evt;
     BOOL* terminate;
     BOOL* stop;
 }work_parameter_t, *p_work_parameter_t;
@@ -12,7 +11,6 @@ typedef struct _work_parameter {
 typedef struct _send_parameter {
     p_queue_t q_send;
     p_queue_t q_send_events;
-    HANDLE evt;
     BOOL* terminate;
     BOOL* stop;
 }send_parameter_t, * p_send_parameter_t;
