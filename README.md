@@ -1,5 +1,5 @@
 # oop_c
-This project will be a part of trading_plaform librires (https://github.com/frogkim/trading_platform).
+This project will be a part of trading_plaform librires (https://github.com/frogkim/trading_platform/tree/main/src/libnetwork).
 
 This project is a network library. It has two main structure, Server and Client.
 The goal of this project is to seperate its internal functions with external functions.
