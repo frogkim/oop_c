@@ -23,7 +23,6 @@ typedef struct _client_original {
     // handle and socket
     SOCKET _socket;
     HANDLE _socket_thread;
-    CHAR* _buffer;                 // release
 
     HANDLE _h_recv_thread;
     HANDLE _h_send_thread;
@@ -31,12 +30,11 @@ typedef struct _client_original {
     p_queue_t _q_recv;
     p_queue_t _q_send;
 
-    KEYHOLDER _keyholder_recv;
-    KEYHOLDER _keyholder_send;
     uint32_t _capacity_recvs;
     uint32_t _capacity_sends;
-    HANDLE _evt_recv;
+    
     HANDLE _evt_send;
+    KEYHOLDER _send_keyholder;
 
     DWORD(*_func_recv)(LPVOID);
     DWORD(*_func_send)(LPVOID);

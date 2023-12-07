@@ -14,16 +14,14 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
     p_queue_t       p_work = self->_q_work;
     p_queue_t       p_work_events = self->_q_work_events;
 
-    HANDLE          evt = NULL;
+    HANDLE          work_evt = NULL;
     DWORD			size_transfer = 0;
-    //node_t client;
-    //p_node_t p_client = &client;
+    node_t client;
+    p_node_t p_client = &client;
 
     WSAOVERLAPPED wol;
     memset(&wol, 0, sizeof(WSAOVERLAPPED));
     LPWSAOVERLAPPED p_wol = &wol;
-
-    p_node_t p_client = NULL;
 
     BOOL			result;
     while (TRUE) {
@@ -31,18 +29,19 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
         //result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)&p_client, &p_client->p_wol, INFINITE);
         result = GetQueuedCompletionStatus(h_iocp, &size_transfer, (PULONG_PTR)&p_client, &p_wol, INFINITE);
 #ifdef DEBUG
-        puts("Received from client");
+        printf("[IOCP] Received from client - %d bytes\n", size_transfer);
+        printf("[IOCP] socket: %p, index: %d\n", (HANDLE) p_client->socket, p_client->index);
 #endif // DEBUG
         if (result == TRUE) {
             if (size_transfer > 0) {
                 // normal. create iocp again
                 // queue has its own critical section
                 p_work->set_tail(p_work, p_client);
-                while (!p_work_events->get_front(p_work_events, &evt)) {
+                while (!p_work_events->get_front(p_work_events, &work_evt)) {
                     // no waiting thread
                     Sleep(100);
                 }
-                SetEvent(evt);
+                SetEvent(work_evt);
                 WSARecv(p_client->socket, &p_client->wsabuf, 1, &p_client->n_recv, &p_client->flag, p_client->p_wol, NULL);
 #ifdef DEBUG
                 int result = WSAGetLastError();
@@ -52,7 +51,7 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
             } else {
                 // client try to close handle
 #ifdef DEBUG
-                printf("client: %d is disconnected correctly.\n", p_client->index);
+                printf("[IOCP] client: %d is disconnected correctly.\n", p_client->index);
 #endif // DEBUG
                 shutdown(p_client->socket, SD_BOTH);
                 closesocket(p_client->socket);
@@ -61,7 +60,7 @@ void _func_iocp_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
         } else {
             // disconnected
 #ifdef DEBUG
-            printf("client: %d is disconnected unexpectedly.\n", p_client->index);
+            printf("[IOCP] client: %d is disconnected unexpectedly.\n", p_client->index);
 #endif // DEBUG
             shutdown(p_client->socket, SD_BOTH);
             closesocket(p_client->socket);

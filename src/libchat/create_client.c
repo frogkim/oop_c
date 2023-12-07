@@ -29,12 +29,10 @@ p_Client_t __stdcall CreateClient_or_null(uint32_t buffer_size)
     ret->_isstop = FALSE;
     GetSystemInfo(&ret->_info);
 
-    ret->_keyholder_recv = 0;
-    ret->_keyholder_send = 0;
+    ret->_send_keyholder = 0;
     ret->_capacity_recvs = 10000;
     ret->_capacity_sends = 10000;
-    ret->_evt_recv = CreateEvent(NULL, TRUE, TRUE, NULL);
-    ret->_evt_send = CreateEvent(NULL, TRUE, TRUE, NULL);
+    ret->_evt_send = CreateEvent(NULL, TRUE, FALSE, NULL);
     ret->_func_recv = _func_recv_client;
     ret->_func_send = _func_send_client;
     return (p_Client_t)ret;

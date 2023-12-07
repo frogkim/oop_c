@@ -36,9 +36,7 @@ BOOL _deinit_client(p_Client_t _self)
 {
     p_Client_original_t self = (p_Client_original_t)_self;
     release_client(self, all_release);
-    CloseHandle(self->_evt_recv);
     CloseHandle(self->_evt_send);
-    WSACleanup();
     safe_release(self);
     return TRUE;
 }
@@ -51,7 +49,7 @@ VOID release_client(p_Client_original_t self, STEP step)
     case malloc_q_sends:
         safe_release(self->_q_recv);
     case malloc_q_recvs:
-        safe_release(self->_buffer);
+        //safe_release(self->_buffer);
     case malloc_buffer:
         break;
     }
@@ -59,12 +57,11 @@ VOID release_client(p_Client_original_t self, STEP step)
 
 STEP init_mem(p_Client_original_t self)
 {
-    size_t size = self->size_buffer;
-    self->_buffer = (char*) malloc(size);
-    if (self->_buffer == NULL) {
-        return malloc_buffer;
-    }
-    memset(self->_buffer, 0, size);
+    //self->_buffer = malloc(NODE_BUFFER_SIZE);
+    //if (self->_buffer == NULL) {
+    //    return malloc_buffer;
+    //}
+    //memset(self->_buffer, 0, NODE_BUFFER_SIZE);
     return done;
 }
 
@@ -75,25 +72,25 @@ STEP init_queues(p_Client_original_t self)
     size_t size;
 
     capacity = self->_capacity_recvs;
-    datasize = self->size_buffer;
+    datasize = sizeof(node_t);
     size = sizeof(queue_t) + datasize * capacity;
-    self->_q_recv = (p_queue_t)malloc(size);
+
+
+    self->_q_recv = malloc(size);
     if (self->_q_recv == NULL) {
         return malloc_q_recvs;
     }
-    self->_q_recv->_buffer = (PCHAR) &self->_q_recv[1];
+    memset(self->_q_recv, 0, size);
+    self->_q_recv->_buffer = (PCHAR)&self->_q_recv[1];
     init_queue(self->_q_recv, capacity, datasize);
 
-    capacity = self->_capacity_sends;
-    datasize = self->size_buffer;
-    size = sizeof(queue_t) + datasize * capacity;
     self->_q_send = (p_queue_t)malloc(size);
     if (self->_q_send == NULL) {
         return malloc_q_sends;
     }
-    self->_q_send->_buffer = (PCHAR) &self->_q_send[1];
+    memset(self->_q_send, 0, size);
+    self->_q_send->_buffer = (PCHAR)&self->_q_send[1];
     init_queue(self->_q_send, capacity, datasize);
-
     return done;
 }
 

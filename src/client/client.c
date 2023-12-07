@@ -2,6 +2,10 @@
 #include "libchat.h"
 #include <Windows.h>
 #include <stdlib.h>
+#define NODE_BUFFER_SIZE 8192
+#define EMPTY_BUFFER(ch) while(ch != EOF && ch != '\n') { ch = getchar(); } 
+#pragma warning(disable : 4996)
+
 int main(int argv, char** argc)
 {
     HMODULE hModule = LoadLibrary(TEXT("libchat.dll"));
@@ -21,43 +25,34 @@ int main(int argv, char** argc)
     if (!c->init(c)) {
         printf("Failed to init");
     }
+
     printf("This is client\n");
     if (!c->setup(c, "127.0.0.1", 25000)) {
         puts("Failed to setup");
         return 1;
     }
 
-
-    char buf[8192];
-    memset(buf, 0, 8192);
-
-    puts("tried connect");
-    if (!c->connect(c)) {
-        puts("Failed to connect");
-        return 1;
-    }
-    puts("Success to connect");
-
-    printf("you enter: ");
-    int n = scanf("%s", buf);
-    c->send_async(c, buf);
-    puts("Sent asynchronously");
-
+    char buf[NODE_BUFFER_SIZE];
+    memset(buf, 0, NODE_BUFFER_SIZE);
+    int continue_writing = 0;
+    int index = 0;
     while (1) {
-        char ch = getchar();
+        printf("Enter command: ");
+        char ch = 0;
+        ch = getchar();
         switch (ch) {
-        case 'q': 
+        case 'q':
             puts("quit");
             goto END;
 
         case 'c':
-            puts("tried connect");
             if (!c->connect(c)) {
                 puts("Failed to connect");
                 return 1;
             }
             puts("Success to connect");
             break;
+
         case 'd':
             puts("tried disconnect");
             if (!c->disconnect(c)) {
@@ -66,33 +61,39 @@ int main(int argv, char** argc)
             }
             puts("Success to disconnect");
             break;
-
+        case 'i':
+            printf("you enter: ");
+            EMPTY_BUFFER(ch);
+            ch = getchar();
+            for (int index = 0; index < NODE_BUFFER_SIZE; index++) {
+                buf[index] = ch;
+                if (index == NODE_BUFFER_SIZE) {
+                    break;
+                }
+                ch = getchar();
+                if (ch == EOF || ch == '\n') {
+                    buf[index + 1] = '\n';
+                    break;
+                }
+            } 
+            
+            break;
 
         case 's':
-            printf("you enter: ");
-            int n = scanf("%s", buf);
             c->send_async(c, buf);
-            puts("Sent asynchronously");
             break;
 
         case 'r':
-            memset(buf, 0, 8192);
+            memset(buf, 0, 512);
             c->recv_async(c, buf);
-            if (buf[0] == 0) {
-                puts("failed to get received data");
-            } else {
-                printf("you receive: %s\n", buf);
-            }
             break;
-        }
 
-    }
+        case 'p':
+            printf("%s", buf);
+            break;
+        } // end switch
+        EMPTY_BUFFER(ch);
+    } // end while
 END:
-
-
-
-
-
-
     c->deinit(c);
 }
