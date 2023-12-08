@@ -21,3 +21,24 @@ After the constructor's work is done, it returns original structure 'Server_orig
 It is very similar with inheritance of OOP. In actually it creates an object as child, it returns the form as its parent.
 User cannot access original form's members because I only provide limited header and lib or dll files.
 However, I cannot block them to access the memory directly. It is limited only C language's level.
+
+
+Server structure
+
+This Server manages clients data as queue. List type can be applied, but I want to avoid **memory fragmentation**.
+If the number of clients exceed the capacity of queue, it will burst, but the server should be swift.
+I sacrified stable but take speed. It should be changed depends on its environment.
+
+Queue Style
+![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_03_queue.png)  
+Queue is thread safe and return copied data.
+Queue is called by other thread frequently, so managing race condition is essential.
+Also, it should be done in short time. Otherwise it will be a bottle-neck.
+
+This queue uses Critical Section. I chose Critical Section because it is faster way provided by Windows system.
+However, in linux environment, there is no other way to use Mutex.
+
+In the trading_platform library, queue will return just pointer without copying. Racing condition will be protected by **spin lock**.
+Copying data will be responsible to each working thread. Copying should be done before queue dump the designated memory block.
+It will not be protected by lock. However, to dump the block, queue should turn whole queue's capacity. If the capacity large enough, it will not be short time and safe enough.
+
