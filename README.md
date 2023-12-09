@@ -5,6 +5,7 @@ This project is a network library. It has two main structure, Server and Client.
 The goal of this project is to seperate its internal functions with external functions.
 This program is written by C and Windows API. I tried to implement encapsulation compile code seprately and provide limited header to users.
 
+<h2>Server structure</h2>
 ![Structure](https://github.com/frogkim/pictures/blob/main/oop_c_01.png)  
 Left is public members of server structure. A user of this library can manage only these for functions.
 Right is the actual form of server structure. Prefix '_' indicates the variables are only used in internal functions.
@@ -22,14 +23,11 @@ It is very similar with inheritance of OOP. In actually it creates an object as 
 User cannot access original form's members because I only provide limited header and lib or dll files.
 However, I cannot block them to access the memory directly. It is limited only C language's level.
 
-
-Server structure
-
 This Server manages clients data as queue. List type can be applied, but I want to avoid **memory fragmentation**.
 If the number of clients exceed the capacity of queue, it will burst, but the server should be swift.
 I sacrified stable but take speed. It should be changed depends on its environment.
 
-Queue Style
+<h2>Queue</h2>
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_03_queue.png)  
 Queue is thread safe and return copied data.
 Queue is called by other thread frequently, so managing race condition is essential.
@@ -42,3 +40,5 @@ In the trading_platform library, queue will return just pointer without copying.
 Copying data will be responsible to each working thread. Copying should be done before queue dump the designated memory block.
 It will not be protected by lock. However, to dump the block, queue should turn whole queue's capacity. If the capacity large enough, it will not be short time and safe enough.
 
+<h2>Result</h2>
+![Result](https://github.com/frogkim/pictures/blob/main/oop_c_04.png)  
