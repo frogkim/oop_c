@@ -6,6 +6,7 @@ The goal of this project is to seperate its internal functions with external fun
 This program is written by C and Windows API. I tried to implement encapsulation compile code seprately and provide limited header to users.
 
 <h2>Server structure</h2>
+
 ![Structure](https://github.com/frogkim/pictures/blob/main/oop_c_01.png)  
 Left is public members of server structure. A user of this library can manage only these for functions.
 Right is the actual form of server structure. Prefix '_' indicates the variables are only used in internal functions.
@@ -28,6 +29,7 @@ If the number of clients exceed the capacity of queue, it will burst, but the se
 I sacrified stable but take speed. It should be changed depends on its environment.
 
 <h2>Queue</h2>
+
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_03_queue.png)  
 Queue is thread safe and return copied data.
 Queue is called by other thread frequently, so managing race condition is essential.
@@ -41,4 +43,12 @@ Copying data will be responsible to each working thread. Copying should be done 
 It will not be protected by lock. However, to dump the block, queue should turn whole queue's capacity. If the capacity large enough, it will not be short time and safe enough.
 
 <h2>Result</h2>
-![Result](https://github.com/frogkim/pictures/blob/main/oop_c_04.png)  
+
+![Result](https://github.com/frogkim/pictures/blob/main/oop_c_04_result.png)  
+Client tried to connect.
+Server's listen thread notice it and attach this client's socket to iocp.
+
+Client tried to send a mesasge.
+Server's iocp thread got the message and push it in the recv queue, and then, set event to wake up work thread. iocp waits until next call. It is managed by kernel.
+Server's work thread wake up by the event, and work with the message. Then, it sets event up to wake up send thread. The work thread goes to wait until next call. It is managed by kernel.
+Server's send thread wake up by the event, and send the message to client. Then, it goes to wait until next call.
