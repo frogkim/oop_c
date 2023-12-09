@@ -14,15 +14,13 @@ void _func_work_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
     p_queue_t p_send_events = p_param->q_send_events;
 
     HANDLE work_evt = NULL;
-    //PHANDLE p_work_evt = &work_evt;
-
     HANDLE send_evt = NULL;
-    //PHANDLE p_send_evt = &send_evt;
 
     p_work_events->get_front(p_work_events, &work_evt);
     p_work_events->set_tail(p_work_events, &work_evt);
     DWORD dw_event;
     node_t client;
+    ZeroMemory(&client, sizeof(node_t));
 
     CHAR buffer[NODE_BUFFER_SIZE];
 
@@ -52,14 +50,15 @@ void _func_work_server(PTP_CALLBACK_INSTANCE instance, PVOID pParam, PTP_WORK wo
         size_t len = strlen("Server received message - ");
         memcpy(buffer, "Server received message - ", len);
         size_t n_str = strlen(client.wsabuf.buf);
-        strcpy_s(&buffer[len + 1], n_str, client.wsabuf.buf);
-        client.wsabuf.len = len + n_str;
+        memcpy(&buffer[len], client.wsabuf.buf, n_str);
+        buffer[len + n_str] = '\0';
+        client.wsabuf.len = len + n_str + 1;
         memcpy(&client.wsabuf.buf[0], &buffer[0], client.wsabuf.len);
-
-        // stack sending queue
-        //p_send->set_tail(p_send, &client);
+#ifdef DEBUG
+        printf("[WORK] work thread made a message:\n");
+        printf("[WORK] %s\n", client.wsabuf.buf);
+#endif // DEBUG
         p_send->set_tail(p_send, &client);
-
         p_work_events->set_tail(p_work_events, &work_evt);
         p_send_events->get_front(p_send_events, &send_evt);
         SetEvent(send_evt);

@@ -2,6 +2,7 @@
 #include "libchat.h"
 #include <Windows.h>
 #include <stdlib.h>
+#include <time.h>
 #define NODE_BUFFER_SIZE 8192
 #define EMPTY_BUFFER(ch) while(ch != EOF && ch != '\n') { ch = getchar(); } 
 #pragma warning(disable : 4996)
@@ -31,6 +32,19 @@ int main(int argv, char** argc)
         puts("Failed to setup");
         return 1;
     }
+    
+    
+    char time_buf[100];
+    struct timespec ts;
+    int ret = timespec_get(&ts, TIME_UTC);
+    strftime(time_buf, sizeof(time_buf), "%D %T", gmtime(&ts.tv_sec));
+    printf("%s", time_buf);
+    printf(".%6d\n", ts.tv_nsec / 1000);
+    
+
+
+
+
 
     char buf[NODE_BUFFER_SIZE];
     memset(buf, 0, NODE_BUFFER_SIZE);
