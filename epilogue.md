@@ -1,1 +1,1 @@
-OOP style with C
+Please see README.md
