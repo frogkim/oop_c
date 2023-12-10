@@ -42,6 +42,12 @@ In the trading_platform library, queue will return just pointer without copying.
 Copying data will be responsible to each working thread. Copying should be done before queue dump the designated memory block.
 It will not be protected by lock. However, to dump the block, queue should turn whole queue's capacity. If the capacity large enough, it will not be short time and safe enough.
 
+<h2>Queue</h2>
+
+![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_05_iocp.png)  
+![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_06_work.png)  
+![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_07_send.png)  
+
 <h2>Result</h2>
 
 ![Result](https://github.com/frogkim/pictures/blob/main/oop_c_04_result.png)  
