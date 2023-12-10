@@ -42,11 +42,33 @@ In the trading_platform library, queue will return just pointer without copying.
 Copying data will be responsible to each working thread. Copying should be done before queue dump the designated memory block.
 It will not be protected by lock. However, to dump the block, queue should turn whole queue's capacity. If the capacity large enough, it will not be short time and safe enough.
 
-<h2>Queue</h2>
+<h2>Threadpools</h2>
 
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_05_iocp.png)  
+
+<h3>IOCP Threadpool</h3>
+1. Wake up with a request from a client.<br>
+2. Store data to work queue.<br>
+3. Retrieve event from work event queue.<br>
+4. Call a work thread with the event.<br>
+
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_06_work.png)  
+
+<h3>Work Threadpool</h3>
+1. Wake up with the event that an iocp thread called.<br>
+2. Retrieve data from work queue and work.<br>
+3. Store data to send in send queue.<br>
+4. Store its event to work event queue for next work.<br>
+5. Retrieve a event from send event queue.<br>
+6. Call a send thread with the event.<br>
+
+
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_07_send.png)  
+
+<h3>Send Threadpool</h3>
+1. Wake up with the event that a work thread called.<br.
+2. Send data to client. <br>
+3. Store its event to send event queue for next work.<br>
 
 <h2>Result</h2>
 
