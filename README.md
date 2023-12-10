@@ -66,7 +66,7 @@ It will not be protected by lock. However, to dump the block, queue should turn 
 ![Constructor](https://github.com/frogkim/pictures/blob/main/oop_c_07_send.png)  
 
 <h3>Send Threadpool</h3>
-1. Wake up with the event that a work thread called.<br.
+1. Wake up with the event that a work thread called.<br>
 2. Send data to client. <br>
 3. Store its event to send event queue for next work.<br>
 
