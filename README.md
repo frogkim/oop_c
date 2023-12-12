@@ -2,8 +2,8 @@
 This project will be a part of trading_plaform librires (https://github.com/frogkim/trading_platform/tree/main/src/libnetwork).
 
 This project is a network library. It has two main structure, Server and Client.
-The goal of this project is to seperate its internal functions with external functions.
-This program is written by C and Windows API. I tried to implement encapsulation compile code seprately and provide limited header to users.
+The goal of this project is to separate its internal functions with external functions.
+This program is written by C and Windows API. I tried to implement encapsulation compile code separately and provide limited header to users.
 
 <h2>Server structure</h2>
 
