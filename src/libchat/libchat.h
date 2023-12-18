@@ -26,9 +26,9 @@
 typedef struct _server {
     // public
     int (*init)(struct _server*);
+    int (*deinit)(struct _server*);
     void (*stop)(struct _server*);
     void (*resume)(struct _server*);
-    int (*deinit)(struct _server*);
 } Server_t, *p_Server_t;
 
 typedef struct _client {
